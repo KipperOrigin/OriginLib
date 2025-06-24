@@ -17,7 +17,7 @@ public abstract class BaseCommand {
     private Map<String, CommandParameter> optionalParameters;
     private List<List<String>> tabCompletes;
     private String permission;
-    private String helpMessage;
+    private String[] helpMessageChunks; // Array of help message chunks
     private boolean playerRequired;
 
     public BaseCommand(String command) {
@@ -27,7 +27,7 @@ public abstract class BaseCommand {
         tabCompletes = new ArrayList<>();
         permission = null;
         this.command = command;
-        this.helpMessage = "Default help message for " + command;
+        this.helpMessageChunks = new String[] { "Default help message for " + command }; // Default chunk
         this.playerRequired = false;
 
         // Add the default help flag
@@ -38,9 +38,9 @@ public abstract class BaseCommand {
         flags.add(flag);
     }
 
-    // Set the help message (can be overridden in subclasses)
-    public void setHelpMessage(String helpMessage) {
-        this.helpMessage = helpMessage;
+    // Set the help message chunks (can be overridden in subclasses)
+    public void setHelpMessageChunks(String[] helpMessageChunks) {
+        this.helpMessageChunks = helpMessageChunks;
     }
 
     // Set whether the command requires a player
@@ -57,7 +57,7 @@ public abstract class BaseCommand {
 
         // If the "-help" flag is present, show the help message and cancel the command
         if (flags.contains("-help")) {
-            MessageUtil.sendCustomMessage(sender, helpMessage);
+            sendHelpMessage(sender);
             return;
         }
 
@@ -123,6 +123,13 @@ public abstract class BaseCommand {
 
         // Execute the command
         runCommand(sender, passedFlags, passedParameters, passedOptionalParameters);
+    }
+
+    private void sendHelpMessage(CommandSender sender) {
+        // Send each chunk in the help message array
+        for (String chunk : helpMessageChunks) {
+            MessageUtil.sendCustomMessage(sender, chunk);
+        }
     }
 
     public void addParameter(CommandParameter parameter) {
