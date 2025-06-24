@@ -5,7 +5,7 @@ import java.util.List;
 
 public abstract class CommandParameter {
 
-    private String errorMessage;
+    private String errorMessage;    
     private List<String> tabCompletionValues;
 
     public CommandParameter(String errorMessage,String... tabCompletes) {
