@@ -5,12 +5,14 @@ import java.util.List;
 
 public abstract class CommandParameter {
 
-    private String errorMessage;    
+    private String errorMessage;
     private List<String> tabCompletionValues;
+    private String permission;
+    private String description = "No description provided."; // NEW
 
-    public CommandParameter(String errorMessage,String... tabCompletes) {
+    public CommandParameter(String errorMessage, String... tabCompletes) {
         this.errorMessage = errorMessage;
-        tabCompletionValues = Arrays.asList(tabCompletes);
+        this.tabCompletionValues = Arrays.asList(tabCompletes);
     }
 
     public abstract boolean checkArgument(String argument);
@@ -28,8 +30,30 @@ public abstract class CommandParameter {
         return tabCompletionValues;
     }
 
-    public CommandParameter setTabCompletionValues(String... value) {
-        tabCompletionValues = Arrays.asList(value);
+    public CommandParameter setTabCompletionValues(String... values) {
+        this.tabCompletionValues = Arrays.asList(values);
+        return this;
+    }
+
+    public String getPermission() {
+        return permission;
+    }
+
+    public void setPermission(String permission) {
+        this.permission = permission;
+    }
+
+    public CommandParameter withPermission(String permission) {
+        this.permission = permission;
+        return this;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public CommandParameter setDescription(String description) {
+        this.description = description;
         return this;
     }
 }

@@ -7,6 +7,7 @@ public class CommandParameterString extends CommandParameter {
 
     public CommandParameterString() {
         super("must be a string!");
+        setDescription("<string> Value must be a string of text. To have spaces, enclose the text in quotes.");
     }
 
     @Override
