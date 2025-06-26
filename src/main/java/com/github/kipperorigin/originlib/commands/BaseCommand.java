@@ -7,20 +7,21 @@ import org.bukkit.entity.Player;
 
 import java.util.*;
 
-// Core abstract class for creating commands with parameters, optional parameters, and flags.
-// Supports permissions, tab completion, usage help, and detailed error handling.
 public abstract class BaseCommand {
 
-    // Command metadata
     private String command;
     private String description = "No description provided.";
     private String permission;
     private String[] helpMessageChunks;
     private boolean playerRequired;
 
-    // Command structure maps
-    private final Map<String, CommandParameter> flags = new HashMap<>();
+    // Updated flag structure
+    private record Flag(String description, String permission) {
+    }
+
+    private final Map<String, Flag> flags = new HashMap<>();
     private final Map<String, String> flagAliases = new HashMap<>();
+
     private final List<CommandParameter> parameters = new ArrayList<>();
     private final Map<String, CommandParameter> optionalParameters = new HashMap<>();
     private final Map<String, String> optionalParamAliases = new HashMap<>();
@@ -31,27 +32,21 @@ public abstract class BaseCommand {
         this.helpMessageChunks = new String[]{"Default help message for " + command};
     }
 
-    /**
-     * Returns the command name.
-     */
     public String getCommand() {
         return command;
     }
 
-    /**
-     * Returns all tab completion lists for this command's parameters.
-     */
     public List<List<String>> getTabCompletes() {
         return tabCompletes;
     }
 
-    // Add required parameter
     public void addParameter(CommandParameter parameter) {
         parameters.add(parameter);
-        if (parameter.getTabCompletes() != null) tabCompletes.add(parameter.getTabCompletes());
+        if (parameter.getTabCompletes() != null) {
+            tabCompletes.add(parameter.getTabCompletes());
+        }
     }
 
-    // Add optional parameter by a single alias or multiple aliases
     public void addOptionalParameter(String prefix, CommandParameter parameter) {
         optionalParameters.put(prefix, parameter);
         optionalParamAliases.put(prefix, prefix);
@@ -64,20 +59,22 @@ public abstract class BaseCommand {
         }
     }
 
-    // Add flag with or without aliases
-    public void addFlag(String flag, CommandParameter parameter) {
-        flags.put(flag, parameter);
+    public void addFlag(String flagName) {
+        addFlag(flagName, null, null);
+    }
+
+    public void addFlag(String flag, String description, String permission) {
+        flags.put(flag, new Flag(description, permission));
         flagAliases.put(flag, flag);
     }
 
-    public void addFlag(String[] aliases, CommandParameter parameter) {
+    public void addFlag(String[] aliases, String description, String permission) {
         for (String alias : aliases) {
-            flags.put(alias, parameter);
+            flags.put(alias, new Flag(description, permission));
             flagAliases.put(alias, aliases[0]);
         }
     }
 
-    // Metadata setters
     public void setDescription(String description) {
         this.description = description;
     }
@@ -94,7 +91,6 @@ public abstract class BaseCommand {
         this.helpMessageChunks = helpMessageChunks;
     }
 
-    // Command entry point — parses input, checks permissions, and delegates to runCommand
     public void execute(CommandSender sender, String[] arguments) {
         if (playerRequired && !(sender instanceof Player)) {
             MessageUtil.sendCustomMessage(sender, "&cThis command can only be used by a player!");
@@ -120,16 +116,17 @@ public abstract class BaseCommand {
             MessageUtil.sendShortCommandMessage(sender, command, parameters.size());
             return;
         }
+
+        runCommand(sender, passedFlags, passedParameters, passedOptionalParameters);
     }
 
-    // Handle single-word flags like "--debug"
     private boolean handleFlag(CommandSender sender, String argument, List<String> passedFlags) {
         if (!flags.containsKey(argument)) return false;
 
-        CommandParameter flagParam = flags.get(argument);
         String primary = flagAliases.get(argument);
+        Flag flag = flags.get(argument);
 
-        if (flagParam.getPermission() != null && !sender.hasPermission(flagParam.getPermission())) {
+        if (flag.permission != null && !sender.hasPermission(flag.permission)) {
             MessageUtil.sendCustomMessage(sender, "&cYou do not have permission to use " + primary + " for " + command + ".");
             return true;
         }
@@ -138,7 +135,6 @@ public abstract class BaseCommand {
         return true;
     }
 
-    // Handle optional parameters like "player:Steve"
     private boolean handleOptionalParameter(CommandSender sender, String argument, Map<String, Object> passedOptionalParameters) {
         for (Map.Entry<String, CommandParameter> entry : optionalParameters.entrySet()) {
             String key = entry.getKey();
@@ -168,7 +164,6 @@ public abstract class BaseCommand {
         return false;
     }
 
-    // Handle positional parameters like "<target> <amount>"
     private boolean handleParameter(CommandSender sender, String argument, List<Object> passedParameters) {
         if (passedParameters.size() >= parameters.size()) {
             MessageUtil.sendLongCommandMessage(sender, command, parameters.size());
@@ -185,7 +180,6 @@ public abstract class BaseCommand {
         return true;
     }
 
-    // Sends usage/help information for the command
     private void sendHelpMessage(CommandSender sender) {
         MessageUtil.sendCustomMessage(sender, "&6Command: /" + command);
         MessageUtil.sendCustomMessage(sender, "&7" + description);
@@ -211,13 +205,13 @@ public abstract class BaseCommand {
 
         if (!flags.isEmpty()) {
             MessageUtil.sendCustomMessage(sender, "&6Flags:");
-            Set<String> used = new HashSet<>();
-            for (Map.Entry<String, CommandParameter> entry : flags.entrySet()) {
-                String alias = entry.getKey();
+            Set<String> shown = new HashSet<>();
+            for (String alias : flags.keySet()) {
                 String canonical = flagAliases.get(alias);
-                if (!used.add(canonical)) continue;
-                String desc = entry.getValue().getDescription();
-                MessageUtil.sendCustomMessage(sender, "  &e" + alias + "&7: " + desc);
+                if (shown.add(canonical)) {
+                    String desc = flags.get(alias).description;
+                    MessageUtil.sendCustomMessage(sender, "  &e" + canonical + "&7: " + (desc != null ? desc : "No description."));
+                }
             }
         }
 
@@ -226,7 +220,6 @@ public abstract class BaseCommand {
         }
     }
 
-    // Generate usage string based on command structure
     private String generateUsageString() {
         StringBuilder usage = new StringBuilder();
 
@@ -249,6 +242,10 @@ public abstract class BaseCommand {
         return usage.toString().trim();
     }
 
-    // Required method for command behavior — return null for no message, or a string for success/failure message
-    public abstract void runCommand(CommandSender sender, List<String> flags, List<Object> parameters, Map<String, Object> optionalParameters);
+    public abstract void runCommand(
+            CommandSender sender,
+            List<String> flags,
+            List<Object> parameters,
+            Map<String, Object> optionalParameters
+    );
 }
