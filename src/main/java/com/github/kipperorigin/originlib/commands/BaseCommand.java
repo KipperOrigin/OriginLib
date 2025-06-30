@@ -40,6 +40,10 @@ public abstract class BaseCommand {
         return tabCompletes;
     }
 
+    public void addTabCompletes(List<String> completes) {
+        tabCompletes.add(completes);
+    }
+
     public void addParameter(CommandParameter parameter) {
         parameters.add(parameter);
         if (parameter.getTabCompletes() != null) {
